@@ -1,0 +1,17 @@
+services:
+  claude2api:
+    image: pushzx/claude2api:latest
+    container_name: claude2api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      - LISTEN_ADDR=:8080
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
