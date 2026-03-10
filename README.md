@@ -260,6 +260,24 @@ docker compose up -d
 
 ## 更新日志
 
+### v0.6.0 — 2026-03-10
+**修复 403 封禁判断、账号过滤器、输入样式、上下文错误处理**
+
+后端：
+- `IsBanError`：移除对 `permission_error` 的豁免 — 403 + `account_session_invalid` 现在正确标记账号为封禁（之前被静默忽略）
+- 新增 Claude stream error 事件处理（上下文过长等）：流式路径发送 SSE error 事件；非流式返回 HTTP 400 + 标准 JSON 错误体
+
+前端（管理面板）：
+- 账号状态过滤 Pills（全部 / 活跃 / 冷却 / 封禁），实时显示各状态数量
+- 邮箱 + Session Key 搜索框（纯客户端过滤，无额外请求）
+- `renderAccounts()` 与 `refreshAccounts()` 解耦，过滤操作即时响应
+- 模型映射新增行：虚线卡片展示 INPUT → TARGET 标签和箭头
+- CSS：`input:not([type])` 选择器修复裸 `<input>` 标签（mmNewKey、mmCustomVal、accountSearch 在深色模式下白色背景问题）
+- `select` 元素与 `input` 样式统一（边框、圆角、焦点环）
+- i18n 新增：filterAll / filterActive / filterLimited / filterBanned / searchPlaceholder
+
+---
+
 ### v0.5.0 — 2026-03-10
 **新增精确 Token 计数（tiktoken-go / cl100k_base）+ ARM64 镜像支持**
 
