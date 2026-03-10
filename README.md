@@ -240,3 +240,38 @@ curl http://localhost:8080/v1/messages \
 docker compose pull
 docker compose up -d
 ```
+
+---
+
+## 更新日志
+
+### v0.4.0 — 2026-03-10
+**Fix 502 EOF：TLS 客户端缓存 + 全链路网络重试**
+
+根本原因：原版每次 API 调用都创建全新的 TLS 客户端，导致每个子请求（GetOrgID、CreateConversation、SendMessage、UploadFile 等）都需要重新建立 TCP+TLS 握手。在住宅代理环境下，频繁触发 EOF / 连接重置错误。
+
+修复内容：
+- `proxy/session.go`：按 `(sessionKey + proxyURL)` 缓存 TLS 客户端，同一账号复用 keep-alive 连接；代理地址变更时自动创建新连接（旧缓存 GC 回收）；新增 `InvalidateAccount()` 支持封号/错误时主动驱逐缓存
+- `claude/client.go`：新增 `isNetworkError()` + `doWithRetry()` 辅助函数，所有 HTTP 调用在 EOF、连接重置、broken pipe、超时、TLS 握手错误等瞬态网络异常时自动重试最多 3 次，每次重试前主动废弃缓存连接以确保建立新连接
+- `handler/messages.go`：消息处理改进
+
+---
+
+### v0.3.0 — 2026-03-09
+**修复与优化：流式输出、重试、多轮工具调用历史**
+
+- **工具调用多轮历史**：`buildAssistantTurn` 正确合并 text + tool_use；`tool_result` 作为顶层段落输出，不再错误地包裹 `**User**:` 前缀
+- **ReAct 解析**：`extractJSONObject` 改为大括号深度解析器，替换原有正则，正确处理嵌套 `{}` 的 Python 代码块（字典、类定义、f-string）
+- **图片上传**：改为并发 goroutine 上传，N 张图片耗时从 `N×时间` 降为 `max(上传时间)`；每个文件自动重试 3 次
+- **其他**：启动时自动加载 `.env`；Paprika 模式缓存（`sync.Map`）避免每次请求都触发冗余 PATCH
+
+---
+
+### v0.2.0 — 2026-03-08
+**完整 tool_use 实现（ReAct 格式，参考 web2api 方案）**
+
+- 复刻 web2api 经过验证的 ReAct 工具调用策略，适配 Anthropic API 格式
+- **Prompt 侧**：携带 `tools` 数组时自动注入 ReAct 格式规范 + 工具定义；多轮历史中 `tool_use` 块转为 Action/Action Input，`tool_result` 块转为 Observation，支持连续工具调用推理
+- **流式解析**：`reActActive` 模式下文本块静默缓存；`message_delta` 时 `ParseReActOutput` 检测工具调用/最终回答，触发正确的 Anthropic SSE 事件序列
+- **非流式**：收集 `content_block_start(tool_use)` + `input_json_delta`，构建完整 `tool_use` 响应块
+- `stop_reason` 在检测到工具调用时正确设置为 `"tool_use"`
