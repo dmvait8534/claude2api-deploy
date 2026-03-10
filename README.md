@@ -234,6 +234,21 @@ curl http://localhost:8080/v1/messages \
 
 ---
 
+## Docker 镜像说明
+
+| 镜像标签 | 架构 | 适用场景 |
+|---|---|---|
+| `pushzx/claude2api:latest` | amd64 (x86_64) | 普通 PC / 云服务器 |
+| `pushzx/claude2api:latest-arm64` | arm64 (aarch64) | 树莓派、Apple Silicon、ARM 云服务器 |
+
+ARM 设备部署时，在 `docker-compose.yml` 中将镜像名改为：
+
+```yaml
+image: pushzx/claude2api:latest-arm64
+```
+
+---
+
 ## 更新镜像
 
 ```bash
@@ -244,6 +259,17 @@ docker compose up -d
 ---
 
 ## 更新日志
+
+### v0.5.0 — 2026-03-10
+**新增精确 Token 计数（tiktoken-go / cl100k_base）+ ARM64 镜像支持**
+
+- `claude/tokens.go`：用 `github.com/tiktoken-go/tokenizer` 替换原有字符估算启发式算法，采用 cl100k_base 编码（与 Claude/GPT-4 一致）；codec 通过 `sync.Once` 初始化，不可用时自动回退到字符估算
+- `EstimateRequestTokens`：精确统计 system、messages（text / tool_use / tool_result / image）及工具定义的 token 数
+- `StreamTranslator`：在每个 `text_delta` / `thinking_delta` 事件中累计 `outputTokens`
+- 所有 SSE `message_delta` 及非流式响应现在携带真实的 `input_tokens` / `output_tokens`
+- 新增 `pushzx/claude2api:latest-arm64` Docker 镜像，支持树莓派等 ARM 设备部署
+
+---
 
 ### v0.4.0 — 2026-03-10
 **Fix 502 EOF：TLS 客户端缓存 + 全链路网络重试**
