@@ -260,6 +260,37 @@ docker compose up -d
 
 ## 更新日志
 
+### v0.7.0 — 2026-03-11
+**新增 SOCKS5/SOCKS4 代理支持 + SOCKS 错误自动重试**
+
+后端：
+- `claude/client.go`：`isNetworkError()` 新增 `socks5`、`socks4`、`socks connect`、`proxy` 关键字检测，SOCKS 代理连接失败时自动触发重试
+
+管理面板：
+- Fixed 代理卡片新增 `socks5://user:pass@host:port`、`socks5h://user:pass@host:port` 示例格式
+- Rotating 代理卡片新增 SOCKS5 旋转代理示例（`socks5://user-session-{sid}:pass@host:port`）
+- 中英文 i18n 描述同步更新，注明同时支持 `socks4` / `socks4a` 格式
+- tls-client 基于 `golang.org/x/net/proxy` 原生支持全部 SOCKS 协议，无需额外依赖
+
+代理格式（管理面板中可直接填写）：
+
+```
+# SOCKS5（标准，远端 DNS 解析）
+socks5://user:pass@host:port
+
+# SOCKS5h（DNS 交由代理服务器解析，适合穿透场景）
+socks5h://user:pass@host:port
+
+# SOCKS4 / SOCKS4a
+socks4://host:port
+socks4a://host:port
+
+# 旋转 SOCKS5（{sid} 替换为账号唯一标识）
+socks5://user-session-{sid}:pass@host:port
+```
+
+---
+
 ### v0.6.0 — 2026-03-10
 **修复 403 封禁判断、账号过滤器、输入样式、上下文错误处理**
 
